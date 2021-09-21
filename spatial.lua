@@ -43,12 +43,13 @@ function spatial:to_grid(x, y)
     return floor(x / self.cell_size)+1, floor(y / self.cell_size)+1
 end
 
+
 -- Iterates over every data point
 function spatial:for_each(func)
-    for y, col in pairs(self.grid) do
-        for x, cell in pairs(col) do
-            for i, cell_data in pairs(cell) do
-                func(cell_data, x, y, i)
+    for cell_y, col in pairs(self.grid) do
+        for cell_x, cell in pairs(col) do
+            for i, item in pairs(cell) do
+                func(item, cell_x, cell_y, i)
             end
         end
     end
@@ -140,23 +141,5 @@ function spatial:query(filter)
    
     return setmetatable(items, spatial_meta), len
 end
-
-----------<< MANIPULATION METHODS >>----------
-
--- This is an iterator, It returns the item and it's index, In that order.
--- If the list argument isn't provided, It will iterate over all the items.
-function spatial:iter(list)
-    local _list, length = self:query()
-    list = list or _list
-    local index = 0
-    return function()
-        index = index + 1
-        
-        if index <= length then
-            return list[index], index
-        end
-    end
-end
-
 
 return spatial
