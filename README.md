@@ -22,3 +22,16 @@ Returns a list of items from cells that intersect with a rectangle
 Same as `spatial:queryRect`, But for a point. Internally, It actually just calls `spatial:queryRect()` with a width and height of 1.
 ### `spatial:query(filter)`
 Retrns a list of all items in the database, Optionally filtered by a filter function.
+# Internal methods
+Spatial.lua has a few methods it uses internally, But they're also available to the user.
+### `spatial:to_grid(x, y)`
+Converts coordinates to grid coordinates.
+### `spatial:for_each(func)`
+Calls a function on each item in the database. `func` gets passed the following arguments:
+* `item`: The current item.
+* `cell_x` & `cell_y`: The cell `item` is in.
+* `index`: The `item` index within the cell.
+### `spatial:length()`
+Returns the number of items currently in the database.
+# Demo
+The demo is made with [löve](https://love2d.org/). It creates 1.000.000 objects randomly scattered across a large area, And uses Spatial.lua to draw only the ones visible on the screen.
