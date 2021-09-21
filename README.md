@@ -35,3 +35,6 @@ Calls a function on each item in the database. `func` gets passed the following 
 Returns the number of items currently in the database.
 # Demo
 The demo is made with [löve](https://love2d.org/). It creates 1.000.000 objects randomly scattered across a large area, And uses Spatial.lua to draw only the ones visible on the screen.
+
+
+![Demo gif](https://github.com/veethree/spatial/blob/main/Demo/demo_gif.gif)
