@@ -1,4 +1,4 @@
--- spatial.lua - A minimal spacial dictionary for lua
+-- spatial.lua - A minimal spacial database for lua
 -- Version 1.0
 --
 -- MIT License
@@ -34,6 +34,10 @@ local f = string.format
 
 ----------<< LOCAL METHODS >>----------
 
+local default_filter = function()
+    return true
+end
+
 -- Returns the cell coordinates of x and y
 function spatial:to_grid(x, y)
     return floor(x / self.cell_size)+1, floor(y / self.cell_size)+1
@@ -50,87 +54,109 @@ function spatial:for_each(func)
     end
 end
 
+function spatial:length()
+    local len = 0
+    self:for_each(function() len = len + 1 end)
+    return len
+end
+
 ----------<< PUBLIC METHODS >>----------
 
--- Creates & returns a new dictionary
+-- Creates & returns a new database
 function spatial.new(cell_size)
     cell_size = cell_size or 64
     return setmetatable({
         cell_size = cell_size,
-        grid = {}
+        grid = {},
+        length = 0
     }, spatial_meta)
 end
 
--- Inserts data inro the dictionary.
-function spatial:insert(x, y, data)
+-- Inserts data inro the database.
+function spatial:insert(x, y, item)
     local cell_x, cell_y = self:to_grid(x, y)
-    data = data or false
+    item = item or false
     
     self.grid[cell_y] = self.grid[cell_y] or {}
     self.grid[cell_y][cell_x] = self.grid[cell_y][cell_x] or {}
-    insert(self.grid[cell_y][cell_x], data)
-    return cell_x, cell_y
+    insert(self.grid[cell_y][cell_x], item)
+    self.length = self.length + 1
+
+    return item, cell_x, cell_y
 end
 
--- Removes data from the dictionary.
--- If cell_x and cell_y isn't provided, It will search through the whole dictionary
--- which can be slow if it's large.
--- Returns true if the item was sucessfully removed, And false and an error message if not.
-function spatial:remove(data, cell_x, cell_y)
-    if cell_x and cell_y then
-        if not self.grid[cell_y][cell_x] then return false, f("Cell '%dx%d' is empty.", cell_x, cell_y) end
-        for i, cell_data in pairs(self.grid[cell_y][cell_x]) do
-            if cell_data == data then
-                remove(self.grid[cell_y][cell_x], i)
-                return true
-            end
+-- Removes data from the database.
+function spatial:remove(item)
+    for i, cell_data in pairs(self.grid[cell_y][cell_x]) do
+        if cell_data == item then
+            remove(self.grid[cell_y][cell_x], i)
+            self.length = self.length - 1
+            return true
         end
-        return false, f("Cell '%dx%d' doesn't contain this item.", cell_x, cell_y)
-    else
-        self:for_each(function(cell_data, cell_x, cell_y, i) 
-            if cell_data == data then
-                remove(self.grid[cell_y][cell_x], i)
-                return true
-            end
-        end)
-        return false, "Item not found."
     end
+    return false
 end
+
+----------<< QUERYING METHODS >>----------
 
 -- Returns all cells inside the specified rectangle
-function spatial:getRect(x, y, w, h)
+function spatial:queryRect(x, y, w, h, filter)
+    filter = filter or default_filter
     local start_x, start_y = self:to_grid(x, y)
     local end_x, end_y = self:to_grid(x + w, y + h)
-    local data, len = {}, 0
+    local items, len = {}, 0
 
     for y = start_y, end_y do
         for x = start_x, end_x do
             if not self.grid[y] then break end
             if self.grid[y][x] then
                 for _, cell_data in pairs(self.grid[y][x]) do
-                    insert(data, cell_data)
-                    len = len + 1
+                    if filter(cell_data) then
+                        insert(items, cell_data)
+                        len = len + 1
+                    end
                 end
             end
         end
     end
-    return data, len, start_x, start_y
+    return setmetatable(items, spatial_meta), len, start_x, start_y
 end
 
 -- Returns the cell at the specified point
-function spatial:getPoint(x, y)
-    return self:getRect(x, y, 1, 1)
+function spatial:queryPoint(x, y, filter)
+    return self:queryRect(x, y, 1, 1, filter)
 end
 
 -- Collects all data into a table and returns it
-function spatial:getAll()
-    local data, len = {}, 0
+function spatial:query(filter)
+    filter = filter or default_filter
+    local items, len = {}, 0
     self:for_each(function(cell_data)
-        insert(data, cell_data)
-        len = len + 1
+        if filter(cell_data) then
+            insert(items, cell_data)
+            len = len + 1
+        end
     end)
    
-    return data, len
+    return setmetatable(items, spatial_meta), len
 end
+
+----------<< MANIPULATION METHODS >>----------
+
+-- This is an iterator, It returns the item and it's index, In that order.
+-- If the list argument isn't provided, It will iterate over all the items.
+function spatial:iter(list)
+    local _list, length = self:query()
+    list = list or _list
+    local index = 0
+    return function()
+        index = index + 1
+        
+        if index <= length then
+            return list[index], index
+        end
+    end
+end
+
 
 return spatial
