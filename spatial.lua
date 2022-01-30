@@ -1,5 +1,5 @@
 -- spatial.lua - A minimal spacial database for lua
--- Version 1.0
+-- Version 1.1
 --
 -- MIT License
 -- 
@@ -43,22 +43,26 @@ function spatial:to_grid(x, y)
     return floor(x / self.cell_size)+1, floor(y / self.cell_size)+1
 end
 
-
 -- Iterates over every data point
 function spatial:for_each(func)
-    for cell_y, col in pairs(self.grid) do
-        for cell_x, cell in pairs(col) do
-            for i, item in pairs(cell) do
-                func(item, cell_x, cell_y, i)
+    for y, col in pairs(self.grid) do
+        for x, cell in pairs(col) do
+            for i, cell_data in pairs(cell) do
+                func(cell_data, x, y, i)
             end
         end
     end
 end
 
+-- Returns how many items are in the database
 function spatial:length()
     local len = 0
     self:for_each(function() len = len + 1 end)
     return len
+end
+
+function spatial:get_cell_size()
+    return self.cell_size
 end
 
 ----------<< PUBLIC METHODS >>----------
@@ -77,25 +81,38 @@ end
 function spatial:insert(x, y, item)
     local cell_x, cell_y = self:to_grid(x, y)
     item = item or false
-    
+
+
     self.grid[cell_y] = self.grid[cell_y] or {}
     self.grid[cell_y][cell_x] = self.grid[cell_y][cell_x] or {}
     insert(self.grid[cell_y][cell_x], item)
     self.length = self.length + 1
+
+    if type(item) == "table" then
+        item._SPATIAL = {
+            spatial = self,
+            cell_x = cell_x,
+            cell_y = cell_y,
+            cell = self.grid[cell_y][cell_x]
+        }
+    end
 
     return item, cell_x, cell_y
 end
 
 -- Removes data from the database.
 function spatial:remove(item)
-    for i, cell_data in pairs(self.grid[cell_y][cell_x]) do
+    self:for_each(function(cell_data, x, y, i)
         if cell_data == item then
-            remove(self.grid[cell_y][cell_x], i)
-            self.length = self.length - 1
-            return true
+            remove(self.grid[y][x], i)
         end
-    end
-    return false
+    end)
+end
+
+-- Used to update which cell an item belongs to if it moves
+function spatial:update_item_cell(x, y, item)
+    self:remove(item)
+    self:insert(x, y, item)
 end
 
 ----------<< QUERYING METHODS >>----------
@@ -141,5 +158,23 @@ function spatial:query(filter)
    
     return setmetatable(items, spatial_meta), len
 end
+
+----------<< MANIPULATION METHODS >>----------
+
+-- This is an iterator, It returns the item and it's index, In that order.
+-- If the list argument isn't provided, It will iterate over all the items.
+function spatial:iter(list)
+    local _list, length = self:query()
+    list = list or _list
+    local index = 0
+    return function()
+        index = index + 1
+        
+        if index <= length then
+            return list[index], index
+        end
+    end
+end
+
 
 return spatial

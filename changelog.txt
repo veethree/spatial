@@ -1,0 +1,14 @@
+SPATIAL CHANGELOGS
+
+v1.1
+BUGFIXES:
+- Changed the remove function to actually work.
+
+CHANGES:
+- Now, If the item being added to the database is a table, A table will be added to the item called _SPATIAL.
+  It contains the following things:
+  - spatial: A reference to the database it's in.
+  - cell_x & cell_y: Coordinates of the cell the item lives in.
+  - cell: Reference to the cell the item is in.
+
+- Added a new method called update_item_cell that will move an item to a new cell based on world coordinates
