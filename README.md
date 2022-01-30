@@ -12,13 +12,29 @@ Creates and returns a new spatial database.
 spatial:insert(x, y, item)
 ```
 Inserts data into your database. Returns a reference to your data.
+
 * `x` & `y`: The position of your data
 * `item`: The item you want to insert into the database. Can be anything.
+
+If `item` is a table, A table will be added to it called `_SPATIAL`.
+The `_SPATIAL` table has the following things:
+* `spatial`: A reference to the database the item is in
+* `cell_x` & `cell_y`: The coordinates for the cell the item lives in
+* `cell`: A reference to the cell the item lives in.
 ```lua
 spatial:remove(item)
 ```
 Removes `item` from your database.
 * `item`: The item to be removed.
+
+```lua
+spatial:update_item_cell(x, y, item)
+```
+Moves the given item to an appropriate cell. You must call this for every item in your world that moves in order for things
+to work right. If you don't, The item will always be in its initial cell.
+* `x` & `y`: The position of your item
+* `item´: A reference to your item
+
 ## Querying the database 
 ```lua
 spatial:queryRect(x, y, w, h, filter)
