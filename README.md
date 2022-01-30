@@ -31,7 +31,8 @@ Removes `item` from your database.
 spatial:update_item_cell(x, y, item)
 ```
 Moves the given item to an appropriate cell. You must call this for every item in your world that moves in order for things
-to work right. If you don't, The item will always be in its initial cell.
+to work right. It's setup this way because items in spatial.lua are not required to have a position., And if they do have a position, 
+It's up to the user where in the item it's stored.
 * `x` & `y`: The position of your item
 * `item´: A reference to your item
 
