@@ -1,5 +1,11 @@
 SPATIAL CHANGELOGS
 
+v2.0
+Complete rewrite of the module.
+- The module now takes into account the size of items. As a result only tables can be added to the hash, And each item has a bounding box (x, y, width, height)
+- Simplified some of the API (update_item_cell() became update() etc)
+- Bunch of other changes. The readme has been updated to reflect all the changes.
+
 v1.1
 BUGFIXES:
 - Changed the remove function to actually work.
