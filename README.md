@@ -1,126 +1,112 @@
 # Spatial.lua
-Spatial.lua is a spatial hasing library for lua.
+Spatial.lua is a spatial hashing library for lua
 
 ## Basic usage
-```lua 
-spatial.new(cellSize)
-```
-Creates and returns a new spatial hash. 
-* `cellSize`: the size of the cells spatial sorts your data into. It's pretty arbitrary. Defaults to 64.
-## Inserting & removing items
 ```lua
-spatial:insert(item, x, y, width, height)
+spatial = require "spatial"
+myStuff = spatial()
+myThing = {x = 0, y = 0, width = 32, height = 32, color = {0, 1, 1}}
+myStuff:insert(myThing, myThing.x, myThing.y, myThing.width, myThing.height)
+
+local someOfMyStuff, len = myStuff:queryRect(0, 0, 800, 600)
 ```
-Inserts an item into the hash. The item needs to be a table.
 
-* `item`: The item to be inserted into the hash.
-* `x, y, width, height`: The bounding box for the item.
+## Reference
+### Creating a spatial hash
+```lua
+myHash = spatial.new(cellSize)
+```
+or
+```lua
+myHash = spatial(cellSize)
+```
+* `cellSize` is the size of the cells in the underlying grid. The default is 64.
 
-A table with the key `_SPATIAL` will be added to any item inserted into the hash. The table contains the following keys:
-* `cells`: A table of references to the cells the item is placed in.
+Returns a spatial hash object.
+
+### Adding, Removing and managing items
+```lua
+myHash:insert(item, x, y, width, height)
+```
+* `item` must be a table.
+* `x`, `y`, `width`, `height`: The bounding box for the item
+
+Returns `item`.
+```lua
+myHash:remove(item)
+```
+* `item`: Reference to the item to be removed.
+
+Return `true` if an item was removed.
+```lua
+myHash:update(item, x, y, width, height)
+```
+* `item`: Reference to the item to be removed.
+* `x`, `y`, `width`, `height`: The new bounding box for the item.
+
+You should call this every time an item in your game moves.
+### Querying the hash
+To get items back out of the has, You need to query it. Spatial.lua has 3 (technically speaking 2) methods for this.
+```lua
+myHash:queryRect(x, y, width, height, filter)
+```
+This is the main querying function. It will return a list of all items in cells that intersect with a rectangular area.
+* `x`, `y`, `width`, `height`: The rectangle for the query
+* `filter`: A function to filter the resulting list, Can be `"default"`, `"rect"` or your own filter function. If omitted defaults to `"default"` 
+```lua
+myHash:queryPoint(x, y, filter)
+```
+Internally this is just a shorthand for `queryRect(x, y, 1, 1)`. 
+```lua
+myHash:query(filter)
+```
+This is the slowest query function, If you have a large amount of items in your hash i'd avoid it. If no filter is provided, It will return every item currently in the hash.
+### About filter functions
+Spatial.lua has 2 built in filter functions.
+* `"default"`: This is the default one. It just returns true. Therefore it doesn't actually filter anything.
+* `"rect"`: Only returns items that actually intersect with the query rectangle. For it to work your items need to have the following values in the root of the item table: `x`, `y`, `width`, `height` 
+
+You can also provide your own filter function. The filter function is called for every item a query would return. The item will only be added to the list if the filter function returns true. The filter function is called with the following arguments
+```lua
+filter(item, x, y, width, height)
+```
+where `x`, `y`, `w`, `h` refer to the query rectangle, And `item` refers to the current item.
+## Other stuff
+### `_SPATIAL` table
+Spatial.lua adds a table to every item added to the hash called `_SPATIAL`. It contains the following:
+* `cells`: A list of references to cells where the item exists. (items can exist simultaneously in multiple cells, But duplicates are filtered out in queries)
 * `spatial`: A reference to the spatial module
+### Adding custom filters
+You can add your own filters to Spatial.lua's internal filter list via this function
 ```lua
-spatial:remove(item)
+spatial:newFilter(name, filter)
 ```
-Removes `item` from your database.
-* `item`: The item to be removed.
-
+where `name` is a string used to refer to the filter in queries, and `filter` is the function.
+### Internal functions
+Spatial has some functions it uses internally. You can use them too if you really want.
 ```lua
-spatial:update(item, x, y, width, height)
+myHash:getCells(x, y, width, height)
 ```
-Updates the bounding box for `item`. This should be called everytime an item in your game moves.
-* `item`: A reference to your item
-* `x, y, width, height`: The new bounding box for your item.
-
-## Querying the database 
+returns a list of cells that intersect with a rectangle. The cells are simple lists of items.
 ```lua
-spatial:queryRect(x, y, width, height, filter)
-```
-Returns a list of items in cells that intersect with a rectangle
-* `x, y, width, height`: The bounding box for the query.
-* `filter`: An optional filter function.
-```lua
-spatial:queryPoint(x, y, filter)
-```
-Same as `spatial:queryRect`, But for a point. Internally, It actually just calls `spatial:queryRect()` with a width and height of 1.
-```lua
-spatial:query(filter)
-```
-Retrns a list of all items in the hash, Optionally filtered by a filter function.
-## About filters
-A filter is a function that gets called for every item in a query. If it returns true, The item will be returned. Otherwise its omitted.
-The filter is called with the following arguments:
-* `item`: A reference to the item being filtered
-* `x, y, width, height`: The bounding box of the query
-
-Spatial comes with 2 built in filters, "default" and "rect".
-* `"default"` just returns true, Therefore it doesn't actually filter anything. This filter is used by default if one isn't provided
-* `"rect"` will only return items that actually intersect with the query rectangle. For it to work the items must have x, y, width and height values in the root of the table.
-
-```lua
--- This filter would only return items that have a "type" key, And its set to "tile"
-local filter = function(item)
-  return item.type == "tile"
-end
-
--- This filter would only return items with "type" set to "monster" and "alive" set to true
-local filter = function(item)
-  if item.type == "monster" and item.alive then
-    return true
-  end
-end
-```
-## Internal methods
-Spatial.lua has a few methods it uses internally, But they're also available to the user.
-```lua
-spatial:getCells(x, y, width, height)
-```
-Returns a list of cells that intersect with a rectangle
-```lua
-spatial:for_each(func)
-```
-Calls a function on each item in the database. `func` gets passed the following arguments:
-* `item`: The current item.
-* `cell_x` & `cell_y`: The cell `item` is in.
-* `index`: The `item` index within the cell.
-```lua
-spatial:length()
-```
-Returns the number of items currently in the database.
-## Demo
-The demo is made with [löve](https://love2d.org/). It creates 1.000.000 objects randomly scattered across a large area, And uses Spatial.lua to draw only the ones visible on the screen.
-
-
-![Demo gif](https://github.com/veethree/spatial/blob/main/Demo/demo_gif.gif)
-
-## How does it work?
-The spatial database is essentially just a 2d table. Well *technically* 3d, But i prefer to think of it as 2d. It looks *something* like this:
-```lua
-table = {
-    row = {cell = {}, cell = {}, cell = {}},
-    row = {cell = {}, cell = {}, cell = {}},
-    row = {cell = {}, cell = {}, cell = {}},
+cell = {
+  item1,
+  item2,
+  -- etc...
 }
 ```
 
-When you insert an item into a database, You specify a position.
 ```lua
-data:insert(x, y, myItem)
+myHash:addToCell(item, cellX, cellY)
 ```
-Then Spatial, Based on the position will figure out which "cell" the item should be put into like so:
+Adds `item` to a cell at `cellX` x `cellY`. Also creates the cell if it does not exist yet.
+
 ```lua
-cell_x = floor(x / cell_size)
-cell_y = floor(y / cell_size)
+myHash:forEach(func)
 ```
-`cell_x` & `cell_y` are the row and column of the 2d table. So they act like coordinates for the cell the item should be added into. Then your item is added to that cell.
-
-
-Then when you query the database with `queryRect`, Spatial will convert the 4 corners of the rectangle you specified to cell coordinates, And then it can iterate over just the cells that intersect with the rectangle, And collect all the items from those cells into a table, And thats the table it returns.
-Internally, `queryPoint` actually just calls `queryRect` with a width and height of 1.
-
-The `query` function will iterate over all the cells in the table, So it can be a bit slower if you have a large database.
-
-# So what is it useful for?
-Spatial was designed with games in mind. You can use it for the common task of only rendering and/or updating things that are currently on the screen.
-
-If you imagine a game like terraria, You have a large world that extends way beyond the limits of your screen. And if you tried to render and update all that stuff every frame, You would get one frame per week. But if you use Spatial you can put all your tiles, monsters, entities and whatever else you have in your game world into a spatial database, And when it comes time to render/update, You query the database with a rectangle at the position of your camera, with the width/height of your window and just render/update those things. That's literally what the demo is doing.
+Calls function `func` for each item in the hash. `func` is called with the follwing arguments:
+* `item`: The current item.
+* `cell`: The cell the item is in.
+* `index`: The items index in its cell
+* 
+Note that this function does not account for duplicates. So if an item exists in say 3 cells, `func` will be called 3 times for that item.
